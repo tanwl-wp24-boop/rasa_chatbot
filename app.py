@@ -28,7 +28,7 @@ if "messages" not in st.session_state:
 @st.cache_data
 def load_data():
 
-    file_path = "dataset/MegaGymDataset.csv"
+    file_path = "dataset/megaGymDataset.csv"
 
     df = pd.read_csv(file_path)
 
