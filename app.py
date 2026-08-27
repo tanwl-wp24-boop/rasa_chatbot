@@ -1,50 +1,87 @@
 import streamlit as st
-import pandas as pd
+import requests
 import uuid
+import time
+import pandas as pd
+import os
 
 
-# Page setup
+# ==============================
+# Rasa API Configuration
+# ==============================
+
+RASA_URL = "http://localhost:5005/webhooks/rest/webhook"
+
+
+# ==============================
+# Page Configuration
+# ==============================
+
 st.set_page_config(
     page_title="Gym and Fitness Chatbot",
-    page_icon="🤖💪"
+    page_icon="🤖💪",
+    layout="centered"
 )
 
 
 st.title("🤖 Gym and Fitness Chatbot")
+st.caption(
+    "Your AI fitness assistant that recommends exercises based on "
+    "body part, equipment, and difficulty level."
+)
 
 
-# Session
+# ==============================
+# Session Management
+# ==============================
+
 if "sender_id" not in st.session_state:
+
     st.session_state.sender_id = str(uuid.uuid4())
 
 
 if "messages" not in st.session_state:
+
     st.session_state.messages = []
 
 
+# ==============================
+# Sidebar
+# ==============================
 
-# Load dataset
-@st.cache_data
-def load_data():
+with st.sidebar:
 
-    return pd.read_csv(
-        "dataset/megaGymDataset.csv"
+    st.header("⚙️ Chat Settings")
+
+    st.success("Rasa Server Connected")
+
+    st.write(
+        """
+        **Available Features**
+        
+        ✅ Exercise Recommendation  
+        ✅ Natural Language Understanding  
+        ✅ Body Part Detection  
+        ✅ Equipment Detection  
+        ✅ Difficulty Level Detection
+        """
     )
 
 
-try:
+    if st.button("🗑 Clear Conversation"):
 
-    df = load_data()
+        st.session_state.messages = []
 
-except Exception as e:
+        st.session_state.sender_id = str(uuid.uuid4())
 
-    st.error("Dataset cannot be loaded")
-    st.write(e)
-    st.stop()
+        st.rerun()
 
 
 
-# Show history
+# ==============================
+# Display Chat History
+# ==============================
+
 for message in st.session_state.messages:
 
     with st.chat_message(message["role"]):
@@ -53,269 +90,20 @@ for message in st.session_state.messages:
 
 
 
-# -----------------------------
-# Intent detection
-# -----------------------------
-
-def detect_intent(message):
-
-    message = message.lower()
-
-
-    greetings = [
-        "hi",
-        "hello",
-        "hey"
-    ]
-
-
-    if any(word in message for word in greetings):
-
-        return "greeting"
-
-
-
-    fitness_words = [
-        "exercise",
-        "workout",
-        "gym",
-        "fitness",
-        "train",
-        "training",
-        "muscle",
-        "strength",
-        "lift",
-        "routine"
-    ]
-
-
-    if any(word in message for word in fitness_words):
-
-        return "fitness"
-
-
-
-    return "unknown"
-
-
-
-
-# -----------------------------
-# Extract information
-# -----------------------------
-
-def extract_body_part(message):
-
-    body_parts = {
-
-        "chest": [
-            "chest",
-            "pec",
-            "pecs"
-        ],
-
-        "back": [
-            "back",
-            "lat",
-            "lats"
-        ],
-
-        "legs": [
-            "leg",
-            "quad",
-            "hamstring"
-        ],
-
-        "shoulders": [
-            "shoulder",
-            "delts"
-        ],
-
-        "biceps": [
-            "bicep"
-        ],
-
-        "triceps": [
-            "tricep"
-        ],
-
-        "abs": [
-            "abs",
-            "core"
-        ]
-    }
-
-
-    for body, keywords in body_parts.items():
-
-        for word in keywords:
-
-            if word in message:
-
-                return body
-
-
-    return None
-
-
-
-def extract_equipment(message):
-
-    equipment = {
-
-        "dumbbell": [
-            "dumbbell",
-            "db"
-        ],
-
-        "barbell": [
-            "barbell"
-        ],
-
-        "machine": [
-            "machine"
-        ],
-
-        "bodyweight": [
-            "bodyweight",
-            "no equipment"
-        ]
-
-    }
-
-
-    for item, keywords in equipment.items():
-
-        for word in keywords:
-
-            if word in message:
-
-                return item
-
-
-    return None
-
-
-
-def extract_level(message):
-
-    levels = [
-        "beginner",
-        "intermediate",
-        "advanced"
-    ]
-
-
-    for level in levels:
-
-        if level in message:
-
-            return level
-
-
-    return None
-
-
-
-
-# -----------------------------
-# Recommendation
-# -----------------------------
-
-def recommend_exercise(user_message):
-
-    message = user_message.lower()
-
-    result = df.copy()
-
-
-    body = extract_body_part(message)
-
-    equipment = extract_equipment(message)
-
-    level = extract_level(message)
-
-
-
-    response = "Here are your recommended exercises:\n\n"
-
-
-
-    # body filtering
-
-    if body and "bodyPart" in result.columns:
-
-        result = result[
-            result["bodyPart"]
-            .astype(str)
-            .str.lower()
-            .str.contains(body)
-        ]
-
-
-
-    # equipment filtering
-
-    if equipment and "Equipment" in result.columns:
-
-        result = result[
-            result["Equipment"]
-            .astype(str)
-            .str.lower()
-            .str.contains(equipment)
-        ]
-
-
-
-    if len(result) == 0:
-
-        return (
-            "I could not find an exact match 😅\n"
-            "Try asking something like:\n"
-            "'Beginner chest workout with dumbbells'"
-        )
-
-
-
-    sample = result.sample(
-        min(3, len(result))
-    )
-
-
-
-    for _, row in sample.iterrows():
-
-        if "Title" in row:
-
-            response += f"💪 {row['Title']}\n"
-
-        elif "title" in row:
-
-            response += f"💪 {row['title']}\n"
-
-        else:
-
-            response += f"💪 {row.iloc[0]}\n"
-
-
-
-    return response
-
-
-
-
-# -----------------------------
-# Chat
-# -----------------------------
+# ==============================
+# User Input
+# ==============================
 
 user_input = st.chat_input(
-    "Type your message..."
+    "Example: Recommend beginner chest exercises using dumbbells"
 )
 
 
 
 if user_input:
 
+
+    # Store user message
 
     st.session_state.messages.append(
         {
@@ -331,49 +119,229 @@ if user_input:
 
 
 
-    intent = detect_intent(
-        user_input
-    )
+    # ==============================
+    # Connect with Rasa
+    # ==============================
+
+    try:
+
+        start_time = time.time()
 
 
-    if intent == "greeting":
+        response = requests.post(
 
-        bot_response = (
-            "Hello! 👋\n\n"
-            "I am your Gym and Fitness Assistant 💪\n"
-            "Ask me for workout recommendations!"
+            RASA_URL,
+
+            json={
+
+                "sender":
+
+                st.session_state.sender_id,
+
+                "message":
+
+                user_input
+
+            },
+
+            timeout=10
+
         )
 
 
-    elif intent == "fitness":
+        response_time = round(
+            time.time() - start_time,
+            2
+        )
 
-        bot_response = recommend_exercise(
-            user_input
+
+        response.raise_for_status()
+
+
+        rasa_response = response.json()
+
+
+
+        # ==============================
+        # Display Bot Response
+        # ==============================
+
+
+        if rasa_response:
+
+
+            for message in rasa_response:
+
+
+                if "text" in message:
+
+
+                    bot_text = message["text"]
+
+
+                    st.session_state.messages.append(
+
+                        {
+
+                            "role": "assistant",
+
+                            "content": bot_text
+
+                        }
+
+                    )
+
+
+                    with st.chat_message("assistant"):
+
+                        st.write(bot_text)
+
+
+
+            st.caption(
+                f"⚡ Response time: {response_time}s"
+            )
+
+
+        else:
+
+
+            bot_text = (
+                "Sorry, I could not understand your request. "
+                "Please try again."
+            )
+
+
+            st.session_state.messages.append(
+
+                {
+
+                    "role": "assistant",
+
+                    "content": bot_text
+
+                }
+
+            )
+
+
+            with st.chat_message("assistant"):
+
+                st.warning(bot_text)
+
+
+
+    except requests.exceptions.ConnectionError:
+
+
+        st.error(
+            """
+            ❌ Cannot connect to Rasa server.
+            
+            Please make sure:
+            
+            1. Rasa action server is running
+            
+            2. Rasa API server is running
+            """
+        )
+
+
+    except requests.exceptions.Timeout:
+
+
+        st.error(
+            "⏳ Rasa response timeout. Please try again."
+        )
+
+
+    except Exception as e:
+
+
+        st.error(
+            f"Unexpected error: {e}"
+        )
+
+
+
+# ==============================
+# User Feedback Section
+# ==============================
+
+st.divider()
+
+st.subheader("⭐ Rate Your Experience")
+
+
+rating = st.slider(
+
+    "How useful was the chatbot recommendation?",
+
+    min_value=1,
+
+    max_value=5,
+
+    value=5
+
+)
+
+
+
+if st.button("Submit Feedback"):
+
+
+    feedback_file = "feedback.csv"
+
+
+    feedback_data = {
+
+
+        "sender_id":
+        st.session_state.sender_id,
+
+
+        "rating":
+        rating
+
+
+    }
+
+
+
+    if os.path.exists(feedback_file):
+
+        df = pd.read_csv(feedback_file)
+
+        df = pd.concat(
+
+            [
+
+                df,
+
+                pd.DataFrame([feedback_data])
+
+            ],
+
+            ignore_index=True
+
         )
 
 
     else:
 
-        bot_response = (
-            "I am a Gym and Fitness Assistant 💪\n\n"
-            "I can help you with:\n"
-            "• Exercise recommendations\n"
-            "• Workout ideas\n"
-            "• Muscle training\n\n"
-            "Try asking:\n"
-            "'Recommend chest exercises'"
+
+        df = pd.DataFrame(
+            [feedback_data]
         )
 
 
 
-    st.session_state.messages.append(
-        {
-            "role": "assistant",
-            "content": bot_response
-        }
+    df.to_csv(
+        feedback_file,
+        index=False
     )
 
 
-    with st.chat_message("assistant"):
-
-        st.write(bot_response)
+    st.success(
+        "Thank you for your feedback!"
+    )
