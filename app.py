@@ -150,7 +150,9 @@ if user_input:
 
         response.raise_for_status()
 
-        print(response.text)
+        print("STATUS CODE:", response.status_code)
+        print("RESPONSE TEXT:", response.text)
+        
         rasa_response = response.json()
 
 
