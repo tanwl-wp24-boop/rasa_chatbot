@@ -10,7 +10,7 @@ import os
 # Rasa API Configuration
 # ==============================
 
-RASA_URL = "https://rasachatbo-hlvrvggoccbghzxjwbine7.streamlit.app"
+RASA_URL = "http://localhost:5005/webhooks/rest/webhook"
 
 
 # ==============================
@@ -29,24 +29,22 @@ st.set_page_config(
 # ==============================
 
 if "sender_id" not in st.session_state:
-
     st.session_state.sender_id = str(uuid.uuid4())
 
 
 if "messages" not in st.session_state:
-
     st.session_state.messages = []
 
 
 
 # ==============================
-# Header Section
+# Header
 # ==============================
 
-header_col1, header_col2 = st.columns([8, 1])
+col1, col2 = st.columns([8, 1])
 
 
-with header_col1:
+with col1:
 
     st.title("🤖 Gym and Fitness Chatbot")
 
@@ -56,11 +54,11 @@ with header_col1:
     )
 
 
-with header_col2:
+with col2:
 
     st.write("")
 
-    if st.button("🗑", help="Clear conversation"):
+    if st.button("🗑"):
 
         st.session_state.messages = []
 
@@ -75,7 +73,7 @@ st.divider()
 
 
 # ==============================
-# Chat History
+# Display Chat History
 # ==============================
 
 for message in st.session_state.messages:
@@ -113,12 +111,7 @@ if user_input:
 
 
 
-    # ==============================
-    # Connect with Rasa
-    # ==============================
-
     try:
-
 
         start_time = time.time()
 
@@ -128,13 +121,8 @@ if user_input:
             RASA_URL,
 
             json={
-
-                "sender":
-                st.session_state.sender_id,
-
-                "message":
-                user_input
-
+                "sender": st.session_state.sender_id,
+                "message": user_input
             },
 
             timeout=10
@@ -148,46 +136,30 @@ if user_input:
         )
 
 
-       response.raise_for_status()
-
-        st.write("Status Code:", response.status_code)
-        st.write("Raw Response:", response.text)
-
-        try:
-            rasa_response = response.json()
-
-        except Exception:
-            st.stop()
+        response.raise_for_status()
 
 
+        rasa_response = response.json()
 
-        # ==============================
-        # Bot Response
-        # ==============================
 
 
         if rasa_response:
 
 
-            for message in rasa_response:
+            for item in rasa_response:
 
 
-                if "text" in message:
+                if "text" in item:
 
 
-                    bot_text = message["text"]
+                    bot_text = item["text"]
 
 
                     st.session_state.messages.append(
-
                         {
-
                             "role": "assistant",
-
                             "content": bot_text
-
                         }
-
                     )
 
 
@@ -202,6 +174,7 @@ if user_input:
             )
 
 
+
         else:
 
 
@@ -212,15 +185,10 @@ if user_input:
 
 
             st.session_state.messages.append(
-
                 {
-
                     "role": "assistant",
-
                     "content": bot_text
-
                 }
-
             )
 
 
@@ -237,10 +205,11 @@ if user_input:
             """
             ❌ Cannot connect to Rasa server.
 
-            Please make sure:
+            Please run:
 
-            1. Rasa action server is running
-            2. Rasa API server is running
+            1. rasa run actions
+
+            2. rasa run --enable-api
             """
         )
 
@@ -249,7 +218,7 @@ if user_input:
 
 
         st.error(
-            "⏳ Rasa response timeout. Please try again."
+            "⏳ Rasa response timeout."
         )
 
 
@@ -263,7 +232,7 @@ if user_input:
 
 
 # ==============================
-# Feedback Section
+# Feedback
 # ==============================
 
 st.divider()
@@ -276,11 +245,11 @@ rating = st.slider(
 
     "How useful was the chatbot recommendation?",
 
-    min_value=1,
+    1,
 
-    max_value=5,
+    5,
 
-    value=5
+    5
 
 )
 
@@ -292,56 +261,32 @@ if st.button("Submit Feedback"):
     feedback_file = "feedback.csv"
 
 
-    feedback_data = {
-
-        "sender_id":
-        st.session_state.sender_id,
-
-        "rating":
-        rating
-
-    }
-
+    new_feedback = pd.DataFrame(
+        [
+            {
+                "sender_id": st.session_state.sender_id,
+                "rating": rating
+            }
+        ]
+    )
 
 
     if os.path.exists(feedback_file):
 
+        old_feedback = pd.read_csv(feedback_file)
 
-        df = pd.read_csv(feedback_file)
-
-
-        df = pd.concat(
-
+        new_feedback = pd.concat(
             [
-
-                df,
-
-                pd.DataFrame(
-                    [feedback_data]
-                )
-
+                old_feedback,
+                new_feedback
             ],
-
             ignore_index=True
-
         )
 
 
-    else:
-
-
-        df = pd.DataFrame(
-            [feedback_data]
-        )
-
-
-
-    df.to_csv(
-
+    new_feedback.to_csv(
         feedback_file,
-
         index=False
-
     )
 
 
