@@ -10,7 +10,7 @@ import os
 # Rasa API Configuration
 # ==============================
 
-RASA_URL = "https://your-rasa-server.com/webhooks/rest/webhook"
+RASA_URL = "https://rasachatbo-hlvrvggoccbghzxjwbine7.streamlit.app"
 
 
 # ==============================
