@@ -148,12 +148,16 @@ if user_input:
         )
 
 
-        response.raise_for_status()
+       response.raise_for_status()
 
-        print("STATUS CODE:", response.status_code)
-        print("RESPONSE TEXT:", response.text)
-        
-        rasa_response = response.json()
+        st.write("Status Code:", response.status_code)
+        st.write("Raw Response:", response.text)
+
+        try:
+            rasa_response = response.json()
+
+        except Exception:
+            st.stop()
 
 
 
